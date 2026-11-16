@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+db.sqlite3
+private_uploads/
+staticfiles/
+.env
+.playwright/
+node_modules/
+.ruff_cache/

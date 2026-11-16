@@ -1,0 +1,7 @@
+.git
+.venv
+db.sqlite3
+private_uploads
+staticfiles
+node_modules
+*.pyc

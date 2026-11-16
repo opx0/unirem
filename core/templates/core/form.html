@@ -1,0 +1,4 @@
+{% extends 'core/base.html' %}{% block title %}{{ heading }}{% endblock %}{% block content %}
+<div class="narrow"><p class="eyebrow">Campus Radar</p><h1>{{ heading }}</h1>
+{% if heading == 'Capture a notice' %}<p>Keep the original wording. Add separate events and tasks after saving. No automatic extraction is running.</p>{% endif %}
+<form method="post" {% if multipart %}enctype="multipart/form-data"{% endif %} class="card form">{% csrf_token %}{{ form.as_div }}<button type="submit">{{ submit }}</button></form></div>{% endblock %}

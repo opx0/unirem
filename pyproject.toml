@@ -1,0 +1,17 @@
+[project]
+name = "campus-radar"
+version = "0.1.0"
+description = "Private campus notice and action manager"
+requires-python = ">=3.13"
+dependencies = ["django>=6.1,<6.2", "psycopg[binary]>=3.2", "pillow>=11"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14",
+]
+
+[tool.ruff]
+extend-exclude = ["core/migrations"]
+
+[tool.ruff.lint.per-file-ignores]
+"core/models.py" = ["RUF012"]
