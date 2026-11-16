@@ -1,0 +1,8 @@
+{% extends 'core/base.html' %}{% block title %}Review suggestion{% endblock %}{% block content %}
+<p><a href="{% url 'intake:review' notice.pk %}">← Text extraction and review</a></p>
+<h1>Review suggestion</h1>
+<p>Check the suggestion against the source. Approval saves it for reference only; it does not create or schedule anything.</p>
+<h2>Source evidence</h2><p class="prewrap">{{ suggestion.evidence }}</p>
+<details><summary>Text sent for extraction</summary><p class="prewrap">{{ suggestion.source_text }}</p></details>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit" name="action" value="approve">Approve for reference</button><button type="submit" name="action" value="reject" formnovalidate>Reject</button></form>
+{% endblock %}

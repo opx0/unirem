@@ -23,6 +23,8 @@ class StudentProfile(models.Model):
     institution = models.CharField(max_length=160)
     program = models.CharField(max_length=120)
     batch = models.CharField(max_length=60)
+    section = models.CharField(max_length=60, blank=True)
+    interests = models.TextField(blank=True)
     timezone = models.CharField(max_length=64, default="Asia/Kolkata")
 
     def __str__(self):
@@ -33,6 +35,7 @@ class SourceDocument(Owned):
     file = models.FileField(upload_to=private_path)
     original_name = models.CharField(max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    sha256 = models.CharField(max_length=64, blank=True, db_index=True)
 
     def __str__(self):
         return self.original_name
@@ -47,6 +50,16 @@ class Notice(Owned):
     title = models.CharField(max_length=200)
     original_text = models.TextField(blank=True)
     summary = models.TextField(blank=True)
+    target_program = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Program explicitly stated in the notice, if any.",
+    )
+    target_batch = models.CharField(
+        max_length=60,
+        blank=True,
+        help_text="Batch explicitly stated in the notice, if any.",
+    )
     category = models.CharField(
         max_length=30,
         choices=[
@@ -132,6 +145,24 @@ class Opportunity(Owned):
         return self.title
 
 
+class OpportunityStage(Owned):
+    opportunity = models.ForeignKey(
+        Opportunity, on_delete=models.CASCADE, related_name="stage_history"
+    )
+    stage = models.CharField(max_length=20, choices=Opportunity.Stage.choices)
+    previous_stage = models.CharField(
+        max_length=20, choices=Opportunity.Stage.choices, blank=True
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-recorded_at", "-pk")
+
+    def clean(self):
+        if self.opportunity_id and self.opportunity.owner_id != self.owner_id:
+            raise ValidationError("The opportunity must belong to this student.")
+
+
 class Event(Owned):
     class Kind(models.TextChoices):
         ATTEND = "attend", "Attendance"
@@ -145,6 +176,12 @@ class Event(Owned):
     ends_at = models.DateTimeField(null=True, blank=True)
     date_only = models.DateField(null=True, blank=True)
     source_timezone = models.CharField(max_length=64, blank=True)
+    location = models.CharField(max_length=255, blank=True)
+    duration_minutes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Duration stated in the source, not an inferred latest start.",
+    )
     notice = models.ForeignKey(
         Notice, null=True, blank=True, on_delete=models.SET_NULL, related_name="events"
     )
@@ -177,6 +214,11 @@ class Task(Owned):
     description = models.TextField(blank=True)
     due_date = models.DateField(null=True, blank=True)
     completed = models.BooleanField(default=False)
+    priority = models.CharField(
+        max_length=8,
+        choices=[("low", "Low"), ("normal", "Normal"), ("high", "High")],
+        default="normal",
+    )
     notice = models.ForeignKey(
         Notice, null=True, blank=True, on_delete=models.SET_NULL, related_name="tasks"
     )

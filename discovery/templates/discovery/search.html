@@ -1,0 +1,21 @@
+{% extends 'core/base.html' %}{% block title %}Search{% endblock %}{% block content %}
+<p class="eyebrow">Find your information</p><h1>Search</h1>
+<form method="get" role="search" class="search">
+  <label for="q">Search your saved records</label>
+  <div><input id="q" name="q" type="search" value="{{ query }}" maxlength="200" placeholder="Company, exam, requirement…"><button type="submit">Search</button></div>
+  <label for="type">Record type</label>
+  <select id="type" name="type"><option value="">All types</option>{% for kind in types %}<option value="{{ kind }}"{% if record_type == kind %} selected{% endif %}>{{ kind|title }}</option>{% endfor %}</select>
+</form>
+{% if query %}
+<div class="grid">{% for result in page %}<article class="card item">
+  <p>{{ result.kind|title }}</p>
+  <h3>{% if result.kind == 'notices' %}<a href="{% url 'notice' result.item.pk %}">{{ result.item.title }}</a>{% else %}<a href="{% url 'record_edit' result.kind result.item.pk %}">{{ result.item.title }}</a>{% endif %}</h3>
+  {% if result.source %}<p>Source: <a href="{% url 'notice' result.source.pk %}">{{ result.source.title }}</a></p>{% endif %}
+</article>{% empty %}<p>No matches found.</p>{% endfor %}</div>
+{% if page.paginator.num_pages > 1 %}<nav aria-label="Search pages">
+  {% if page.has_previous %}<a href="?q={{ query|urlencode }}&amp;type={{ record_type|urlencode }}&amp;page={{ page.previous_page_number }}">Previous</a>{% endif %}
+  <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?q={{ query|urlencode }}&amp;type={{ record_type|urlencode }}&amp;page={{ page.next_page_number }}">Next</a>{% endif %}
+</nav>{% endif %}
+{% else %}<div class="empty">Search titles, notes and original text from your own saved records.</div>{% endif %}
+{% endblock %}

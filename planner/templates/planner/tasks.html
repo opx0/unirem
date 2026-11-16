@@ -1,0 +1,12 @@
+{% extends "core/base.html" %}
+{% block title %}Tasks{% endblock %}
+{% block content %}
+<h1>Tasks</h1>
+<p><a href="{% url 'planner:agenda' %}">Agenda</a> · <a href="{% url 'planner:new' 'tasks' %}">Add task</a></p>
+<form method="get"><label for="status">Status</label> <select id="status" name="status"><option value="open" {% if status == 'open' %}selected{% endif %}>Open</option><option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option><option value="all" {% if status == 'all' %}selected{% endif %}>All</option></select> <label for="priority">Priority</label> <select id="priority" name="priority"><option value="">All priorities</option>{% for value, label in priorities %}<option value="{{ value }}" {% if priority == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select> <button type="submit">Filter</button></form>
+{% for task in tasks %}
+<article class="card item"><h2>{{ task.title }}</h2><p>{{ task.get_priority_display }} priority · {% if task.completed %}Completed{% else %}Open{% endif %}{% if task.due_date %} · Due {{ task.due_date|date:"M j, Y" }}{% endif %}</p>{% if task.description %}<p>{{ task.description }}</p>{% endif %}
+<p><a href="{% url 'planner:edit' 'tasks' task.pk %}">Edit</a> · <a href="{% url 'checklist:detail' task.pk %}">Checklist</a>{% if task.notice and task.notice.owner_id == user.id %} · <a href="{% url 'notice' task.notice_id %}">Source: {{ task.notice.title }}</a>{% endif %}{% if task.opportunity and task.opportunity.owner_id == user.id %} · <a href="{% url 'record_edit' 'opportunities' task.opportunity_id %}">Opportunity: {{ task.opportunity.title }}</a>{% endif %}</p>
+<form method="post" action="{% url 'planner:toggle_task' task.pk %}">{% csrf_token %}<button type="submit">{% if task.completed %}Mark open{% else %}Mark complete{% endif %}</button></form></article>
+{% empty %}<p>No tasks found.</p>{% endfor %}
+{% endblock %}

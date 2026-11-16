@@ -1,0 +1,17 @@
+{% extends 'core/base.html' %}{% block title %}Text review{% endblock %}{% block content %}
+<p><a href="{% url 'notice' notice.pk %}">← {{ notice.title }}</a></p>
+<h1>Text extraction and review</h1>
+<p>Extraction is optional. PDF text is read locally; images require manual transcription. Always check against the original document.</p>
+<form method="post" action="{% url 'intake:extract' notice.pk %}">{% csrf_token %}<button type="submit">Extract or retry</button></form>
+<h2>Manual transcription</h2>
+<form method="post" action="{% url 'intake:manual' notice.pk %}">{% csrf_token %}{{ manual_form.as_p }}<button type="submit">Save text for review</button></form>
+<h2>Extraction history</h2>
+{% for run in runs %}<section class="card"><h3>{{ run.get_source_display }} · {{ run.get_status_display }}</h3><p>{{ run.created_at|date:'j M Y, g:i A T' }}</p>
+{% if run.failure_reason %}<p>{{ run.failure_reason }}</p>{% else %}
+<h4>Original extracted or transcribed text</h4><p class="prewrap">{{ run.extracted_text }}</p>
+<h4>Reviewed text</h4><p class="prewrap">{{ run.reviewed_text }}</p><a href="{% url 'intake:edit' notice.pk run.pk %}">Edit reviewed text</a>
+<form method="post" action="{% url 'intake:suggest' notice.pk run.pk %}">{% csrf_token %}<p>Optional: send this reviewed text to the configured AI provider. Check its privacy terms before proceeding.</p><button type="submit">Generate suggestions</button></form>
+{% for suggestion in run.suggestions.all %}<div><h4>{{ suggestion.title }} · {{ suggestion.get_status_display }}</h4><p>Source evidence: {{ suggestion.evidence }}</p><p>{{ suggestion.description }} {{ suggestion.date_text }}</p>{% if suggestion.status == 'pending' %}<a href="{% url 'intake:suggestion' notice.pk suggestion.pk %}">Review suggestion</a>{% endif %}</div>{% endfor %}
+{% for duplicate in run.duplicates %}<p>Possible exact text duplicate: <a href="{% url 'notice' duplicate.notice_id %}">{{ duplicate.notice.title }}</a></p>{% endfor %}
+{% endif %}</section>{% empty %}<p>No extraction attempts yet.</p>{% endfor %}
+{% endblock %}

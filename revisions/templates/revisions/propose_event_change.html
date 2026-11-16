@@ -1,0 +1,6 @@
+{% extends 'core/base.html' %}{% block title %}Propose event change{% endblock %}{% block content %}
+<h1>Propose event change</h1>
+<p>Sources: {{ first.title }} and {{ second.title }}. Enter the complete proposed date, time and venue. Nothing changes until you accept the proposal.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Create proposal</button></form>
+<p><a href="{% url 'revisions:compare' first.pk second.pk %}">Back to comparison</a></p>
+{% endblock %}

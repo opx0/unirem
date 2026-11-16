@@ -1,0 +1,5 @@
+{% extends 'core/base.html' %}{% block title %}Compare sources{% endblock %}{% block content %}
+<h1>Compare sources</h1>
+<p>Choose two of your notices. The first notice is the one whose summary you may update.</p>
+<form method="get">{{ form.as_p }}<button type="submit">Compare</button></form>
+{% endblock %}

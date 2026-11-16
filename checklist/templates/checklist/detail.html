@@ -1,0 +1,24 @@
+{% extends "core/base.html" %}
+{% block title %}Checklist{% endblock %}
+{% block content %}
+<h1>Checklist: {{ task.title }}</h1>
+<p><a href="{% url 'planner:tasks' %}">Back to tasks</a></p>
+<form method="post" action="{% url 'checklist:add' task.pk %}">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Add item</button>
+</form>
+{% for item in items %}
+<article>
+  <p>{{ item.title }} · {% if item.completed %}Completed{% else %}Open{% endif %}</p>
+  <form method="post" action="{% url 'checklist:toggle' task.pk item.pk %}">
+    {% csrf_token %}
+    <button type="submit">{% if item.completed %}Mark open{% else %}Mark complete{% endif %}</button>
+  </form>
+  <form method="post" action="{% url 'checklist:delete' task.pk item.pk %}">
+    {% csrf_token %}
+    <button type="submit">Delete</button>
+  </form>
+</article>
+{% empty %}<p>No checklist items yet.</p>{% endfor %}
+{% endblock %}

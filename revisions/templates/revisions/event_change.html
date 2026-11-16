@@ -1,0 +1,10 @@
+{% extends 'core/base.html' %}{% block title %}Event change proposal{% endblock %}{% block content %}
+<h1>Event change proposal</h1>
+<p>Event: {{ proposal.event|default:'Unavailable' }}</p>
+<p>Sources: {{ proposal.first_source.title }} and {{ proposal.second_source.title }}</p>
+<h2>Before</h2>
+<p>Start: {{ proposal.event_before.starts_at|default:'—' }}; end: {{ proposal.event_before.ends_at|default:'—' }}; date: {{ proposal.event_before.date_only|default:'—' }}; venue: {{ proposal.event_before.location|default:'—' }}</p>
+<h2>Proposed</h2>
+<p>Start: {{ proposal.event_after.starts_at|default:'—' }}; end: {{ proposal.event_after.ends_at|default:'—' }}; date: {{ proposal.event_after.date_only|default:'—' }}; venue: {{ proposal.event_after.location|default:'—' }}</p>
+{% if proposal.accepted_at %}<p>Accepted {{ proposal.accepted_at }}.</p>{% else %}<form method="post">{% csrf_token %}<button type="submit">Accept event change</button></form>{% endif %}
+{% endblock %}

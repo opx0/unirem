@@ -1,0 +1,12 @@
+{% extends 'core/base.html' %}{% block title %}Compare sources{% endblock %}{% block content %}
+<p><a href="{% url 'revisions:index' %}">Choose other notices</a></p>
+<h1>Compare sources</h1>
+<p>Review both sources before deciding. Neither choice changes events or deletes either notice.</p>
+<section class="card"><h2>First notice: {{ first.title }}</h2><p>Source document: {% if first.document and first.document.owner_id == request.user.pk %}<a href="{% url 'document_download' first.document.pk %}">{{ first.document.original_name }}</a>{% else %}None available{% endif %}</p><h3>Original text</h3><p class="prewrap">{{ first.original_text|default:'No original text available.' }}</p><h3>Current summary</h3><p class="prewrap">{{ first.summary|default:'No summary.' }}</p></section>
+<section class="card"><h2>Second notice: {{ second.title }}</h2><p>Source document: {% if second.document and second.document.owner_id == request.user.pk %}<a href="{% url 'document_download' second.document.pk %}">{{ second.document.original_name }}</a>{% else %}None available{% endif %}</p><h3>Original text</h3><p class="prewrap">{{ second.original_text|default:'No original text available.' }}</p><h3>Current summary</h3><p class="prewrap">{{ second.summary|default:'No summary.' }}</p></section>
+<h2>Your decision</h2><p>Keep separately records your decision without changing either notice. To update, write the new summary for the first notice yourself.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Record decision</button></form>
+<h2>Event changes</h2>
+<p><a href="{% url 'revisions:propose_event_change' first.pk second.pk %}">Propose an event change</a></p>
+{% for proposal in proposals %}<p><a href="{% url 'revisions:event_change' proposal.pk %}">Event proposal {{ proposal.pk }}</a> {% if proposal.accepted_at %}(accepted){% else %}(pending){% endif %}</p>{% endfor %}
+{% endblock %}

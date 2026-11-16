@@ -1,0 +1,5 @@
+{% extends 'core/base.html' %}{% block title %}Review text{% endblock %}{% block content %}
+<p><a href="{% url 'intake:review' notice.pk %}">← Text extraction and review</a></p>
+<h1>Review text</h1><p>Corrections are kept separately from the original extracted or transcribed text.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save reviewed text</button></form>
+{% endblock %}
