@@ -5,3 +5,13 @@ private_uploads
 staticfiles
 node_modules
 *.pyc
+.env
+.env.*
+**/.env
+**/.env.*
+secreat.txt
+**/secreat.txt
+secret.txt
+**/secret.txt
+*.key
+**/*.key

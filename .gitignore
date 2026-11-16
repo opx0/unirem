@@ -8,3 +8,15 @@ staticfiles/
 .playwright/
 node_modules/
 .ruff_cache/
+
+# Secrets
+secreat.txt
+secret.txt
+*.key
+
+# Local tooling
+pr-agent-local.sh
+review.md
+description.md
+improve.md
+
