@@ -96,3 +96,9 @@ class CoreFeaturesTestCase(TestCase):
         response = self.client.get(url, secure=True)
         self.assertEqual(response.status_code, 404)
 
+    def test_home_view_unread_delivery_count(self):
+        url = reverse("home")
+        response = self.client.get(url, secure=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("unread_delivery_count", response.context)
+        self.assertEqual(response.context["unread_delivery_count"], 0)

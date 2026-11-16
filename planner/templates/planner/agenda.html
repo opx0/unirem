@@ -3,15 +3,18 @@
 {% block content %}
 <h1>Agenda</h1>
 <p><a href="{% url 'planner:tasks' %}">Tasks</a> · <a href="{% url 'planner:new' 'events' %}">Add event</a> · <a href="{% url 'calendar_export:options' %}">Export calendar</a></p>
-<form method="get"><p><label for="period">Show</label> <select id="period" name="period"><option value="upcoming" {% if period == 'upcoming' %}selected{% endif %}>Current and upcoming</option><option value="past" {% if period == 'past' %}selected{% endif %}>Past and completed</option><option value="all" {% if period == 'all' %}selected{% endif %}>All events</option></select></p><p><label for="kind">Event type</label> <select id="kind" name="kind"><option value="">All types</option>{% for value, label in kinds %}<option value="{{ value }}" {% if kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select> <button type="submit">Filter</button></p></form>
+<form method="get">
+<p><label for="period">Show</label> <select id="period" name="period"><option value="upcoming" {% if period == 'upcoming' %}selected{% endif %}>Current and upcoming</option><option value="past" {% if period == 'past' %}selected{% endif %}>Past and completed</option><option value="all" {% if period == 'all' %}selected{% endif %}>All events</option></select></p>
+<p><label for="kind">Event type</label> <select id="kind" name="kind"><option value="">All types</option>{% for value, label in kinds %}<option value="{{ value }}" {% if kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select> <button type="submit">Filter</button></p>
+</form>
 {% for event in events %}
 <article class="card item">
 <h2>{{ event.title }}</h2>
 <p>{{ event.get_kind_display }} · {% if event.date_only %}{{ event.date_only|date:"M j, Y" }} (date only){% else %}{{ event.starts_at|date:"M j, Y, g:i a" }}{% if event.ends_at %} – {{ event.ends_at|date:"M j, Y, g:i a" }}{% endif %}{% endif %}{% if event.location %} · {{ event.location }}{% endif %}</p>
-{% if event.completed %}<p>Completed</p>{% endif %}
-{% if event.conflicts %}<p role="alert">Overlaps: {% for conflict in event.conflicts %}{{ conflict.title }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+{% if event.completed %}<p><span class="badge badge-success">Completed</span></p>{% endif %}
+{% if event.conflicts %}<p class="badge badge-warning">⚠ Overlaps with: {% for c in event.conflicts %}{{ c.title }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
 <p><a href="{% url 'planner:edit' 'events' event.pk %}">Edit</a>{% if event.notice and event.notice.owner_id == user.id %} · <a href="{% url 'notice' event.notice_id %}">Source: {{ event.notice.title }}</a>{% endif %}{% if event.opportunity and event.opportunity.owner_id == user.id %} · <a href="{% url 'record_edit' 'opportunities' event.opportunity_id %}">Opportunity: {{ event.opportunity.title }}</a>{% endif %}</p>
-<form method="post" action="{% url 'planner:complete_event' event.pk %}">{% csrf_token %}<button type="submit" name="completed" value="{% if event.completed %}0{% else %}1{% endif %}">{% if event.completed %}Mark open{% else %}Mark complete{% endif %}</button></form>
+<form method="post" action="{% url 'planner:complete_event' event.pk %}">{% csrf_token %}<label for="complete-{{ event.pk }}" class="skip">Toggle completion for {{ event.title }}</label><button id="complete-{{ event.pk }}" type="submit" name="completed" value="{% if event.completed %}0{% else %}1{% endif %}">{% if event.completed %}Mark open{% else %}Mark complete{% endif %}</button></form>
 </article>
 {% empty %}<p>No events found for this filter.</p>{% endfor %}
 {% endblock %}

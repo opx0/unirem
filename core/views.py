@@ -110,6 +110,9 @@ def home(request):
         )
         .order_by("day", "starts_at")[:8]
     )
+    active_deliveries = NotificationDelivery.objects.filter(
+        reminder__owner=request.user, dismissed_at__isnull=True
+    )
     return render(
         request,
         "core/home.html",
@@ -120,11 +123,10 @@ def home(request):
                 F("due_date").asc(nulls_last=True)
             )[:8],
             "profile_missing": profile is None,
-            "recent_deliveries": NotificationDelivery.objects.filter(
-                reminder__owner=request.user, dismissed_at__isnull=True
-            )
-            .select_related("reminder__event")
-            .order_by("-delivered_at")[:5],
+            "unread_delivery_count": active_deliveries.count(),
+            "recent_deliveries": active_deliveries.select_related(
+                "reminder__event"
+            ).order_by("-delivered_at")[:5],
         },
     )
 
