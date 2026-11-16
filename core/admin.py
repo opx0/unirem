@@ -18,6 +18,17 @@ class PrivateAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs if request.user.is_superuser else qs.filter(owner=request.user)
 
+    def get_form(self, request, obj=None, **kwargs):
+        form_class = super().get_form(request, obj, **kwargs)
+
+        class OwnerForm(form_class):
+            def __init__(self, *args, **form_kwargs):
+                super().__init__(*args, **form_kwargs)
+                if not self.instance.pk:
+                    self.instance.owner = request.user
+
+        return OwnerForm
+
     def save_model(self, request, obj, form, change):
         if not change:
             obj.owner = request.user
@@ -46,6 +57,15 @@ class NoticeAdmin(PrivateAdmin):
 class SourceDocumentAdmin(PrivateAdmin):
     list_display = ("original_name", "owner", "uploaded_at")
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(Event)
 class EventAdmin(PrivateAdmin):
@@ -65,6 +85,15 @@ class OpportunityAdmin(PrivateAdmin):
 @admin.register(AuditEvent)
 class AuditAdmin(PrivateAdmin):
     list_display = ("notice", "owner", "action", "created_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(StudentProfile)

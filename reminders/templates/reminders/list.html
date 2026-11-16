@@ -1,0 +1,12 @@
+{% extends 'core/base.html' %}{% block title %}Reminders{% endblock %}{% block content %}
+<h1>Reminders</h1><p><a href="{% url 'reminders:create' %}">Schedule a reminder</a></p>
+<p>Delivered reminders appear here in the app. No external messages are sent.</p>
+<h2>In-app notifications</h2>
+{% for notification in notifications %}<div class="card"><h3>{{ notification.reminder.target.title }}</h3><p>Available in app since {{ notification.delivered_at }}</p></div>
+{% empty %}<p>No notifications.</p>{% endfor %}
+{% if notifications %}<form method="post" action="{% url 'reminders:clear_notifications' %}">{% csrf_token %}<button type="submit">Clear notifications</button></form>{% endif %}
+<h2>Reminder history</h2>
+{% for item in items %}<div class="card"><h2>{{ item.target.title }}</h2>
+<p>{{ item.scheduled_at }} · {{ item.get_state_display }}{% if item.state == 'delivered' %} ({{ item.delivery.delivered_at }}){% endif %}</p>
+{% if item.state == 'pending' %}<form method="post" action="{% url 'reminders:cancel' item.pk %}">{% csrf_token %}<button type="submit">Cancel reminder</button></form>{% endif %}</div>
+{% empty %}<p>No reminders yet.</p>{% endfor %}{% endblock %}

@@ -4,13 +4,21 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "development-only-not-for-deployment")
 DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
-ALLOWED_HOSTS = os.environ.get(
-    "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver"
-).split(",")
-CSRF_TRUSTED_ORIGINS = [
-    s for s in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if s
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver"
+    ).split(",")
+    if host.strip()
 ]
-if not DEBUG and SECRET_KEY == "development-only-not-for-deployment":
+CSRF_TRUSTED_ORIGINS = [
+    s.strip()
+    for s in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if s.strip()
+]
+if not DEBUG and (
+    not SECRET_KEY.strip() or SECRET_KEY == "development-only-not-for-deployment"
+):
     raise RuntimeError("Set DJANGO_SECRET_KEY outside development")
 
 INSTALLED_APPS = [
@@ -21,6 +29,14 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "core",
+    "intake",
+    "reminders.apps.RemindersConfig",
+    "planner",
+    "revisions.apps.RevisionsConfig",
+    "connections.apps.ConnectionsConfig",
+    "checklist.apps.ChecklistConfig",
+    "discovery",
+    "quiet_hours.apps.QuietHoursConfig",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -83,6 +99,8 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = BASE_DIR / "private_uploads"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
+INTAKE_AI_PROVIDER = os.environ.get("INTAKE_AI_PROVIDER", "")
+INTAKE_OCR_ENABLED = os.environ.get("INTAKE_OCR_ENABLED", "0") == "1"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
 SESSION_COOKIE_HTTPONLY = True

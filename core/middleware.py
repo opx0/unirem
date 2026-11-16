@@ -17,6 +17,9 @@ class ProfileTimezoneMiddleware:
         else:
             timezone.deactivate()
         try:
-            return self.get_response(request)
+            response = self.get_response(request)
+            if request.user.is_authenticated:
+                response["Cache-Control"] = "private, no-store"
+            return response
         finally:
             timezone.deactivate()

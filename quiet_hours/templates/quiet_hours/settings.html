@@ -1,0 +1,9 @@
+{% extends "core/base.html" %}
+{% block title %}Quiet hours{% endblock %}
+{% block content %}
+<div class="narrow">
+  <h1>Quiet hours</h1>
+  <p>Choose a daily interval in your <a href="{% url 'profile' %}">profile timezone</a>. The end may be on the following day. In-app reminders due during this interval are deferred until it ends.</p>
+  <form method="post" class="card form">{% csrf_token %}{{ form.as_div }}<button type="submit">Save preferences</button></form>
+</div>
+{% endblock %}

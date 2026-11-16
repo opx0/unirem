@@ -1,0 +1,27 @@
+{% extends "core/base.html" %}
+{% block title %}Source connections{% endblock %}
+{% block content %}
+<h1>Source connections</h1>
+<p>Sources are optional. No email is accessed or imported automatically.</p>
+
+<section>
+  <h2>Manual</h2>
+  {% if manual_connected %}
+    <p>Status: Enabled. Add notices yourself using <a href="{% url 'capture' %}">Capture</a>.</p>
+    <form method="post" action="{% url 'connections:disconnect_manual' %}">{% csrf_token %}<button type="submit">Disconnect manual source</button></form>
+  {% else %}
+    <p>Status: Not enabled. Manual capture remains available without a connection.</p>
+    <form method="post" action="{% url 'connections:connect_manual' %}">{% csrf_token %}<button type="submit">Enable manual source</button></form>
+  {% endif %}
+  <p>Disconnecting does not delete existing notices.</p>
+</section>
+
+<section>
+  <h2>Gmail</h2>
+  <p>Status: Unavailable. Provider credentials and authorization are required; Gmail connection and email access are not implemented.</p>
+</section>
+<section>
+  <h2>Outlook</h2>
+  <p>Status: Unavailable. Provider credentials and authorization are required; Outlook connection and email access are not implemented.</p>
+</section>
+{% endblock %}

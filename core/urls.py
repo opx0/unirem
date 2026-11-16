@@ -6,6 +6,9 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("register/", views.register, name="register"),
     path("settings/", views.profile, name="profile"),
+    path("settings/privacy/", views.privacy, name="privacy"),
+    path("settings/export/", views.export_data, name="export_data"),
+    path("settings/delete/", views.delete_account, name="delete_account"),
     path("inbox/", views.inbox, name="inbox"),
     path("capture/", views.capture, name="capture"),
     path("inbox/<int:pk>/", views.notice_detail, name="notice"),
@@ -13,7 +16,6 @@ urlpatterns = [
     path(
         "source/<int:pk>/download/", views.document_download, name="document_download"
     ),
-    path("search/", views.search, name="search"),
     path("events/", views.records, {"kind": "events"}, name="events"),
     path("tasks/", views.records, {"kind": "tasks"}, name="tasks"),
     path(
