@@ -42,7 +42,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "while true; do uv run python manage.py run_reminders; sleep 60; done"
+    volumes:
+      - uploads:/app/private_uploads
+    command: sh -c "while true; do uv run python manage.py run_reminders; uv run python manage.py cleanup_document_files; sleep 60; done"
 volumes:
   pgdata:
   uploads:

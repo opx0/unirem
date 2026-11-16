@@ -158,6 +158,22 @@ class CaptureForm(forms.ModelForm):
         return data
 
 
+class NoticeFilterForm(forms.Form):
+    q = forms.CharField(required=False, label="Search notices")
+    category = forms.ChoiceField(
+        required=False,
+        choices=[("", "All categories"), *Notice._meta.get_field("category").choices],
+    )
+    status = forms.ChoiceField(
+        required=False, choices=[("", "All statuses"), *Notice.Status.choices]
+    )
+    state = forms.ChoiceField(
+        required=False,
+        label="Read state",
+        choices=[("", "All notices"), ("unread", "Unread"), ("read", "Read")],
+    )
+
+
 class NoticeEditForm(forms.ModelForm):
     class Meta:
         model = Notice

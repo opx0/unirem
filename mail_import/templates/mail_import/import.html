@@ -1,0 +1,5 @@
+{% extends 'core/base.html' %}{% block title %}Import email{% endblock %}{% block content %}
+<h1>Import an email</h1>
+<p>Choose a personal .eml file (up to 5 MB). The email is processed locally; attachments are not processed. Its text is untrusted and must be reviewed. The original .eml file is retained privately and still contains any embedded attachments.</p>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button type="submit">Import for review</button></form>
+{% endblock %}

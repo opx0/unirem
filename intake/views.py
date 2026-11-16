@@ -2,13 +2,15 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from core.forms import EventForm, TaskForm
 from core.models import Notice
 
 from .forms import SuggestionForm, TextForm
 from .models import ExtractionRun, Suggestion
-from .services import ai_suggestions, extract_document, text_hash
+from .services import ai_suggestions, extract_document, local_suggestions, text_hash
 
 
 @login_required
@@ -123,7 +125,11 @@ def suggest(request, pk, run_pk):
         messages.error(request, "There is no reviewed text to analyze.")
         return redirect("intake:review", pk=pk)
     try:
-        items = ai_suggestions(source)
+        items = (
+            ai_suggestions(source)
+            if request.POST.get("provider") == "ai"
+            else local_suggestions(source)
+        )
     except ValueError as exc:
         messages.error(request, str(exc))
     else:
@@ -139,7 +145,10 @@ def suggest(request, pk, run_pk):
             count = 0
             for item in items:
                 if not Suggestion.objects.filter(
-                    run=locked, source_text=source, **item
+                    run=locked,
+                    source_text=source,
+                    evidence=item["evidence"],
+                    kind=item["kind"],
                 ).exists():
                     Suggestion.objects.create(run=locked, source_text=source, **item)
                     count += 1
@@ -179,4 +188,50 @@ def review_suggestion(request, pk, suggestion_pk):
         request,
         "intake/suggestion.html",
         {"suggestion": suggestion, "form": form, "notice": suggestion.run.notice},
+    )
+
+
+@login_required
+def convert_suggestion(request, pk, suggestion_pk):
+    suggestion = get_object_or_404(
+        Suggestion,
+        pk=suggestion_pk,
+        run__notice_id=pk,
+        run__notice__owner=request.user,
+        run__owner=request.user,
+        status=Suggestion.Status.APPROVED,
+        kind__in=("event", "task"),
+    )
+    if suggestion.converted_at:
+        messages.info(request, "This suggestion has already been converted.")
+        return redirect("intake:review", pk=pk)
+
+    form_type = EventForm if suggestion.kind == "event" else TaskForm
+    initial = {"title": suggestion.title, "notice": suggestion.run.notice_id}
+    if suggestion.kind == "task":
+        initial["description"] = suggestion.description
+    form = form_type(request.POST or None, owner=request.user, initial=initial)
+    form.instance.owner = request.user
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            # Claim the suggestion before saving, so concurrent submissions cannot duplicate it.
+            claimed = Suggestion.objects.filter(
+                pk=suggestion.pk,
+                run__owner=request.user,
+                run__notice__owner=request.user,
+                status=Suggestion.Status.APPROVED,
+                kind=suggestion.kind,
+                converted_at__isnull=True,
+            ).update(converted_at=timezone.now())
+            if claimed:
+                form.save()
+        if claimed:
+            messages.success(request, f"{suggestion.kind.title()} saved.")
+        else:
+            messages.info(request, "This suggestion has already been converted.")
+        return redirect("intake:review", pk=pk)
+    return render(
+        request,
+        "intake/convert.html",
+        {"form": form, "suggestion": suggestion, "notice": suggestion.run.notice},
     )

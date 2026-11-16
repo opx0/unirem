@@ -53,21 +53,42 @@ def reminder_create(request):
                         "The target changed. Please review the reminder and try again.",
                     )
                 else:
-                    Reminder.objects.create(
-                        owner=request.user,
-                        event=target if isinstance(target, Event) else None,
-                        task=target if isinstance(target, Task) else None,
-                        scheduled_at=form.cleaned_data["scheduled_at"],
-                        event_starts_at=target.starts_at
+                    values = {
+                        "owner": request.user,
+                        "relative_minutes": form.cleaned_data["minutes_before"],
+                        "event_starts_at": target.starts_at
                         if isinstance(target, Event)
                         else None,
-                        event_date_only=target.date_only
+                        "event_date_only": target.date_only
                         if isinstance(target, Event)
                         else None,
-                        task_due_date=target.due_date
+                        "task_due_date": target.due_date
                         if isinstance(target, Task)
                         else None,
+                        "state": Reminder.State.PENDING,
+                        "cancellation_reason": "",
+                        "attempts": 0,
+                        "next_attempt_at": None,
+                    }
+                    lookup = {
+                        "event": target if isinstance(target, Event) else None,
+                        "task": target if isinstance(target, Task) else None,
+                        "scheduled_at": form.cleaned_data["scheduled_at"],
+                    }
+                    cancelled = (
+                        Reminder.objects.select_for_update()
+                        .filter(
+                            **lookup, owner=request.user, state=Reminder.State.CANCELLED
+                        )
+                        .order_by("pk")
+                        .first()
                     )
+                    if cancelled:
+                        Reminder.objects.filter(
+                            pk=cancelled.pk, state=Reminder.State.CANCELLED
+                        ).update(**values)
+                    else:
+                        Reminder.objects.create(**lookup, **values)
                     messages.success(request, "Reminder scheduled.")
                     return redirect("reminders:list")
         except IntegrityError:
@@ -86,7 +107,7 @@ def reminder_create(request):
 def reminder_cancel(request, pk):
     reminder = get_object_or_404(Reminder, pk=pk, owner=request.user)
     Reminder.objects.filter(pk=reminder.pk, state=Reminder.State.PENDING).update(
-        state=Reminder.State.CANCELLED
+        state=Reminder.State.CANCELLED, cancellation_reason="Cancelled by you."
     )
     return redirect("reminders:list")
 

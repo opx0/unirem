@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from tempfile import SpooledTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -18,6 +19,7 @@ from django.views.decorators.http import require_POST
 from checklist.models import ChecklistItem
 from connections.models import SourceConnection
 from intake.models import ExtractionRun, Suggestion
+from mail_import.models import ImportedMail
 from quiet_hours.models import QuietHoursPreference
 from reminders.models import NotificationDelivery, Reminder
 from revisions.models import EventChangeProposal, Resolution
@@ -26,6 +28,7 @@ from .forms import (
     CaptureForm,
     EventForm,
     NoticeEditForm,
+    NoticeFilterForm,
     OpportunityForm,
     ProfileForm,
     RegistrationForm,
@@ -37,10 +40,13 @@ from .models import (
     Notice,
     Opportunity,
     OpportunityStage,
+    PendingFileDeletion,
     SourceDocument,
     StudentProfile,
     Task,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def mark_relevance_mismatches(notices, profile):
@@ -125,10 +131,33 @@ def home(request):
 
 @login_required
 def inbox(request):
-    status = request.GET.get("status", "")
+    if request.method == "POST":
+        pk = request.POST.get("notice_id", "")
+        if not pk.isdecimal() or request.POST.get("state") not in ("read", "unread"):
+            raise Http404
+        notice = get_object_or_404(Notice, owner=request.user, pk=pk)
+        notice.is_read = request.POST["state"] == "read"
+        notice.save(update_fields=["is_read"])
+        url = request.path
+        if request.GET:
+            url += "?" + request.GET.urlencode()
+        return redirect(url)
+    form = NoticeFilterForm(request.GET)
     qs = Notice.objects.filter(owner=request.user).select_related("document")
-    if status in Notice.Status.values:
-        qs = qs.filter(status=status)
+    if form.is_valid():
+        data = form.cleaned_data
+        if data["q"]:
+            qs = qs.filter(
+                Q(title__icontains=data["q"])
+                | Q(summary__icontains=data["q"])
+                | Q(original_text__icontains=data["q"])
+            )
+        if data["status"]:
+            qs = qs.filter(status=data["status"])
+        if data["category"]:
+            qs = qs.filter(category=data["category"])
+        if data["state"]:
+            qs = qs.filter(is_read=data["state"] == "read")
     mark_relevance_mismatches(
         qs, StudentProfile.objects.filter(user=request.user).first()
     )
@@ -137,7 +166,7 @@ def inbox(request):
         "core/_items.html"
         if request.headers.get("HX-Request") == "true"
         else "core/list.html",
-        {"heading": "Inbox", "items": qs, "kind": "notice", "status": status},
+        {"heading": "Inbox", "items": qs, "kind": "notice", "filter_form": form},
     )
 
 
@@ -145,25 +174,36 @@ def inbox(request):
 def capture(request):
     form = CaptureForm(request.POST or None, request.FILES or None, owner=request.user)
     if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            notice = form.save(commit=False)
-            notice.owner = request.user
-            upload = form.cleaned_data.get("upload")
-            if upload:
-                document = SourceDocument.objects.create(
+        document = None
+        try:
+            with transaction.atomic():
+                notice = form.save(commit=False)
+                notice.owner = request.user
+                upload = form.cleaned_data.get("upload")
+                if upload:
+                    document = SourceDocument(
+                        owner=request.user,
+                        file=upload,
+                        original_name=Path(upload.name).name[:255],
+                        sha256=form.upload_digest,
+                    )
+                    document.save()
+                    notice.document = document
+                notice.save()
+                AuditEvent.objects.create(
                     owner=request.user,
-                    file=upload,
-                    original_name=Path(upload.name).name[:255],
-                    sha256=form.upload_digest,
+                    notice=notice,
+                    action="captured",
+                    detail={"status": notice.status},
                 )
-                notice.document = document
-            notice.save()
-            AuditEvent.objects.create(
-                owner=request.user,
-                notice=notice,
-                action="captured",
-                detail={"status": notice.status},
-            )
+        except Exception:
+            if document and document.file._committed and document.file.name:
+                try:
+                    document.file.storage.delete(document.file.name)
+                except Exception:
+                    PendingFileDeletion.objects.get_or_create(name=document.file.name)
+                    logger.exception("Failed to delete captured file; queued for retry")
+            raise
         messages.success(
             request, "Captured. Review the original and add each action separately."
         )
@@ -185,6 +225,11 @@ def notice_detail(request, pk):
     notice = get_object_or_404(
         Notice.objects.filter(owner=request.user).select_related("document"), pk=pk
     )
+    if request.method == "GET" and not notice.is_read:
+        Notice.objects.filter(pk=notice.pk, owner=request.user, is_read=False).update(
+            is_read=True
+        )
+        notice.is_read = True
     mark_relevance_mismatches(
         [notice], StudentProfile.objects.filter(user=request.user).first()
     )
@@ -344,6 +389,7 @@ def export_data(request):
         EventChangeProposal,
         SourceConnection,
         QuietHoursPreference,
+        ImportedMail,
     )
     with ZipFile(archive, "w", compression=ZIP_DEFLATED) as bundle:
         bundle.writestr(
@@ -413,17 +459,12 @@ def delete_account(request):
             messages.error(request, "Type DELETE to confirm; nothing was deleted.")
         else:
             user = request.user
-            files = [
-                (document.file.storage, document.file.name)
-                for document in SourceDocument.objects.filter(owner=user)
-            ]
             with transaction.atomic():
                 user.delete()
-                for storage, name in files:
-                    transaction.on_commit(
-                        lambda storage=storage, name=name: storage.delete(name)
-                    )
             logout(request)
-            messages.success(request, "Your account and its records were deleted.")
+            messages.success(
+                request,
+                "Your account and records were deleted. Uploaded files are queued for deletion by the maintenance worker.",
+            )
             return redirect("login")
     return render(request, "core/delete_account.html")

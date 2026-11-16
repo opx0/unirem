@@ -22,11 +22,18 @@ class Command(BaseCommand):
             Reminder.objects.filter(state=Reminder.State.PENDING, scheduled_at__lte=now)
             .filter(Q(next_attempt_at__isnull=True) | Q(next_attempt_at__lte=now))
             .order_by("scheduled_at", "pk")
-            .values_list("pk", "event_id", "task_id")
+            .values_list(
+                "pk",
+                "event_id",
+                "task_id",
+                "scheduled_at",
+                "attempts",
+                "next_attempt_at",
+            )
         )
         delivered = 0
         failed = 0
-        for pk, event_id, task_id in ids:
+        for pk, event_id, task_id, scheduled_at, attempts, next_attempt_at in ids:
             try:
                 was_delivered = False
                 with transaction.atomic():
@@ -75,27 +82,28 @@ class Command(BaseCommand):
                         NotificationDelivery.objects.get_or_create(reminder_id=pk)
                         was_delivered = True
                     else:
-                        pending.update(state=Reminder.State.CANCELLED)
+                        pending.update(
+                            state=Reminder.State.CANCELLED,
+                            cancellation_reason="The target was completed, changed, or no longer belongs to you.",
+                        )
                 delivered += was_delivered
             except Exception:
                 failed += 1
-                logger.exception(
-                    "Could not deliver reminder %s; it remains pending for retry.", pk
-                )
+                logger.exception("Could not deliver reminder %s.", pk)
                 try:
-                    reminder = Reminder.objects.filter(
-                        pk=pk, state=Reminder.State.PENDING
-                    ).first()
-                    if reminder:
-                        delay = min(2 ** min(reminder.attempts, 8), 60)
-                        Reminder.objects.filter(
-                            pk=pk, state=Reminder.State.PENDING
-                        ).update(
-                            attempts=F("attempts") + 1,
-                            next_attempt_at=timezone.now() + timedelta(minutes=delay),
-                        )
+                    delay = min(2 ** min(attempts, 8), 60)
+                    Reminder.objects.filter(
+                        pk=pk,
+                        state=Reminder.State.PENDING,
+                        scheduled_at=scheduled_at,
+                        attempts=attempts,
+                        next_attempt_at=next_attempt_at,
+                    ).update(
+                        attempts=F("attempts") + 1,
+                        next_attempt_at=timezone.now() + timedelta(minutes=delay),
+                    )
                 except DatabaseError:
                     logger.exception("Could not record retry for reminder %s.", pk)
         self.stdout.write(
-            f"Delivered {delivered} in-app reminder(s); {failed} failed and will be retried."
+            f"Delivered {delivered} in-app reminder(s); {failed} delivery attempt(s) failed."
         )

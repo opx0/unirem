@@ -11,7 +11,9 @@ from .models import Reminder
 class ReminderForm(forms.Form):
     event = forms.ModelChoiceField(queryset=Event.objects.none(), required=False)
     task = forms.ModelChoiceField(queryset=Task.objects.none(), required=False)
-    minutes_before = forms.IntegerField(required=False, min_value=0)
+    minutes_before = forms.IntegerField(
+        required=False, min_value=0, max_value=2147483647
+    )
     scheduled_at = forms.DateTimeField(
         required=False,
         widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
@@ -56,7 +58,7 @@ class ReminderForm(forms.Form):
         if scheduled <= timezone.now():
             raise forms.ValidationError("Choose a reminder time in the future.")
         if Reminder.objects.filter(
-            event=event, task=task, scheduled_at=scheduled
+            event=event, task=task, scheduled_at=scheduled, state=Reminder.State.PENDING
         ).exists():
             raise forms.ValidationError(
                 "A reminder already exists for this target and time."

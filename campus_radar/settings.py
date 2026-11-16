@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "core",
+    "login_security",
     "intake",
     "reminders.apps.RemindersConfig",
     "planner",
@@ -37,6 +38,8 @@ INSTALLED_APPS = [
     "checklist.apps.ChecklistConfig",
     "discovery",
     "quiet_hours.apps.QuietHoursConfig",
+    "answers",
+    "mail_import",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -44,6 +47,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "login_security.middleware.AdminLoginThrottleMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.ProfileTimezoneMiddleware",

@@ -1,0 +1,18 @@
+{% extends 'core/base.html' %}{% block title %}Ask your notices{% endblock %}{% block content %}
+<p class="eyebrow">Your sources</p><h1>Ask your notices</h1>
+<p>Search for relevant words in your notices and extractions. Results are quoted passages, not generated answers; check the source for context.</p>
+<form method="get" role="search">
+  {{ form.as_p }}
+  <button type="submit">Find passages</button>
+</form>
+{% if searched %}
+  {% if results %}
+    {% if results|length > 1 or truncated %}<p>Multiple passages match. The answer may be ambiguous; check the sources and refine your question.</p>{% endif %}
+    <div class="grid">{% for result in results %}<article class="card item">
+      <p>{{ result.label }} · <a href="{% url 'notice' result.notice.pk %}">{{ result.notice.title }}</a>{% if result.extraction %} · <a href="{% url 'intake:review' result.notice.pk %}">Review extraction</a>{% endif %}</p>
+      <blockquote>{{ result.snippet }}</blockquote>
+    </article>{% endfor %}</div>
+    {% if truncated %}<p>More passages match. Refine your question to narrow the results.</p>{% endif %}
+  {% else %}<p>No matching passages found. Try more specific words from the notice.</p>{% endif %}
+{% endif %}
+{% endblock %}

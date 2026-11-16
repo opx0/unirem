@@ -3,8 +3,10 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, router, transaction
 from django.db.models import Q
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 
 def private_path(instance, filename):
@@ -39,6 +41,17 @@ class SourceDocument(Owned):
 
     def __str__(self):
         return self.original_name
+
+
+class PendingFileDeletion(models.Model):
+    name = models.CharField(max_length=500, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+@receiver(pre_delete, sender=SourceDocument)
+def queue_document_file_deletion(sender, instance, using, **kwargs):
+    if instance.file.name:
+        PendingFileDeletion.objects.using(using).get_or_create(name=instance.file.name)
 
 
 class Notice(Owned):
@@ -78,6 +91,7 @@ class Notice(Owned):
     status = models.CharField(
         max_length=12, choices=Status.choices, default=Status.REVIEW
     )
+    is_read = models.BooleanField(default=False)
     document = models.ForeignKey(
         SourceDocument, null=True, blank=True, on_delete=models.SET_NULL
     )
@@ -194,6 +208,12 @@ class Event(Owned):
     )
     completed = models.BooleanField(default=False)
 
+    def save(self, *args, **kwargs):
+        using = kwargs.get("using") or router.db_for_write(type(self), instance=self)
+        # Keep the event change and its reminder signal in the same transaction.
+        with transaction.atomic(using=using):
+            return super().save(*args, **kwargs)
+
     def clean(self):
         if bool(self.date_only) == bool(self.starts_at):
             raise ValidationError(
@@ -229,6 +249,12 @@ class Task(Owned):
         on_delete=models.SET_NULL,
         related_name="tasks",
     )
+
+    def save(self, *args, **kwargs):
+        using = kwargs.get("using") or router.db_for_write(type(self), instance=self)
+        # Keep the task change and its reminder signal in the same transaction.
+        with transaction.atomic(using=using):
+            return super().save(*args, **kwargs)
 
     def clean(self):
         for related in (self.notice, self.opportunity):

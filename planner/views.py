@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Case, DateField, F, IntegerField, Q, Value, When
 from django.db.models.functions import Coalesce, TruncDate
-from django.http import Http404
+from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -15,12 +15,20 @@ from core.models import Event, Task
 def agenda(request):
     now = timezone.now()
     kind = request.GET.get("kind", "")
-    events = Event.objects.filter(owner=request.user, completed=False)
-    current = events.filter(
+    period = request.GET.get("period", "upcoming")
+    if period not in ("upcoming", "past", "all"):
+        period = "upcoming"
+    events = Event.objects.filter(owner=request.user)
+    upcoming = Q(completed=False) & (
         Q(date_only__gte=timezone.localdate())
         | Q(starts_at__gte=now)
         | Q(starts_at__lt=now, ends_at__gt=now)
     )
+    current = events
+    if period == "upcoming":
+        current = current.filter(upcoming)
+    elif period == "past":
+        current = current.exclude(upcoming)
     if kind in Event.Kind.values:
         current = current.filter(kind=kind)
     else:
@@ -33,12 +41,15 @@ def agenda(request):
         .order_by("day", "starts_at", "pk")
     )
     # Only explicit intervals can establish an overlap; adjacent endpoints do not.
-    intervals = list(events.filter(starts_at__isnull=False, ends_at__isnull=False))
+    intervals = list(
+        events.filter(completed=False, starts_at__isnull=False, ends_at__isnull=False)
+    )
     for event in current:
         event.conflicts = [
             other
             for other in intervals
-            if event.ends_at
+            if not event.completed
+            and event.ends_at
             and event.starts_at
             and other.pk != event.pk
             and event.starts_at < other.ends_at
@@ -50,6 +61,7 @@ def agenda(request):
         {
             "events": current,
             "kind": kind,
+            "period": period,
             "kinds": Event.Kind.choices,
         },
     )
@@ -124,6 +136,21 @@ def record_form(request, kind, pk=None):
 @require_POST
 def toggle_task(request, pk):
     task = get_object_or_404(Task, owner=request.user, pk=pk)
-    task.completed = not task.completed
+    state = request.POST.get("completed")
+    if state not in ("0", "1"):
+        return HttpResponseBadRequest("Invalid completion state.")
+    task.completed = state == "1"
     task.save(update_fields=["completed"])
     return redirect("planner:tasks")
+
+
+@login_required
+@require_POST
+def complete_event(request, pk):
+    event = get_object_or_404(Event, owner=request.user, pk=pk)
+    state = request.POST.get("completed")
+    if state not in ("0", "1"):
+        return HttpResponseBadRequest("Invalid completion state.")
+    event.completed = state == "1"
+    event.save(update_fields=["completed"])
+    return redirect("planner:agenda")

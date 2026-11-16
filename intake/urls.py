@@ -15,4 +15,9 @@ urlpatterns = [
         views.review_suggestion,
         name="suggestion",
     ),
+    path(
+        "<int:pk>/suggestions/<int:suggestion_pk>/convert/",
+        views.convert_suggestion,
+        name="convert_suggestion",
+    ),
 ]

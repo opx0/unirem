@@ -27,12 +27,14 @@ class Reminder(models.Model):
         blank=True,
     )
     scheduled_at = models.DateTimeField()
+    relative_minutes = models.PositiveIntegerField(null=True, blank=True)
     event_starts_at = models.DateTimeField(null=True, blank=True)
     event_date_only = models.DateField(null=True, blank=True)
     task_due_date = models.DateField(null=True, blank=True)
     state = models.CharField(
         max_length=10, choices=State.choices, default=State.PENDING
     )
+    cancellation_reason = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     attempts = models.PositiveIntegerField(default=0)
     next_attempt_at = models.DateTimeField(null=True, blank=True)
@@ -41,10 +43,14 @@ class Reminder(models.Model):
         ordering: ClassVar = ["-scheduled_at", "-pk"]
         constraints: ClassVar = [
             models.UniqueConstraint(
-                fields=["event", "scheduled_at"], name="reminder_event_time_unique"
+                fields=["event", "scheduled_at"],
+                name="reminder_event_time_unique",
+                condition=models.Q(state="pending"),
             ),
             models.UniqueConstraint(
-                fields=["task", "scheduled_at"], name="reminder_task_time_unique"
+                fields=["task", "scheduled_at"],
+                name="reminder_task_time_unique",
+                condition=models.Q(state="pending"),
             ),
             models.CheckConstraint(
                 condition=(
