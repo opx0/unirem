@@ -104,6 +104,8 @@ MEDIA_ROOT = BASE_DIR / "private_uploads"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 INTAKE_AI_PROVIDER = os.environ.get("INTAKE_AI_PROVIDER", "")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 INTAKE_OCR_ENABLED = os.environ.get("INTAKE_OCR_ENABLED", "0") == "1"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
