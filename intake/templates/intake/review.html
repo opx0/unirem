@@ -2,6 +2,18 @@
 <p><a href="{% url 'notice' notice.pk %}">← {{ notice.title }}</a></p>
 <h1>Text extraction and review</h1>
 <p>Extraction is optional. PDF text is read locally; images require manual transcription. Always check against the original document.</p>
+{% if notice.document %}
+<section class="card source">
+<h2>Original document</h2>
+<p><strong>Source context:</strong> {{ notice.get_source_context_display }}</p>
+{% with ext=notice.document.original_name|lower %}
+{% if '.png' in ext or '.jpg' in ext or '.jpeg' in ext or '.webp' in ext %}
+<img src="{% url 'document_preview' notice.document_id %}" alt="Uploaded screenshot" loading="lazy">
+{% endif %}
+{% endwith %}
+<p><a href="{% url 'document_download' notice.document_id %}">Download {{ notice.document.original_name }}</a></p>
+</section>
+{% endif %}
 <form method="post" action="{% url 'intake:extract' notice.pk %}">{% csrf_token %}<button type="submit">Extract or retry</button></form>
 <h2>Manual transcription</h2>
 <form method="post" action="{% url 'intake:manual' notice.pk %}">{% csrf_token %}{{ manual_form.as_p }}<button type="submit">Save text for review</button></form>
@@ -11,8 +23,41 @@
 <h4>Original extracted or transcribed text</h4><p class="prewrap">{{ run.extracted_text }}</p>
 <h4>Reviewed text</h4><p class="prewrap">{{ run.reviewed_text }}</p><a href="{% url 'intake:edit' notice.pk run.pk %}">Edit reviewed text</a>
 <form method="post" action="{% url 'intake:suggest' notice.pk run.pk %}">{% csrf_token %}<p>Find suggestions locally from reviewed text. Review all suggestions against the source; nothing is scheduled automatically.</p><button type="submit">Find suggestions offline</button></form>
-<form method="post" action="{% url 'intake:suggest' notice.pk run.pk %}">{% csrf_token %}<p>Optional: send this reviewed text to the configured AI provider. Check its privacy terms before proceeding.</p><button type="submit" name="provider" value="ai">Generate AI suggestions</button></form>
-{% for suggestion in run.suggestions.all %}<div><h4>{{ suggestion.title }} · {{ suggestion.get_status_display }}</h4><p>Source evidence: {{ suggestion.evidence }}</p><p>{{ suggestion.description }} {{ suggestion.date_text }}</p>{% if suggestion.status == 'pending' %}<a href="{% url 'intake:suggestion' notice.pk suggestion.pk %}">Review suggestion</a>{% elif suggestion.status == 'approved' %}{% if suggestion.converted_at %}<p>Converted</p>{% elif suggestion.kind == 'event' or suggestion.kind == 'task' %}<a href="{% url 'intake:convert_suggestion' notice.pk suggestion.pk %}">Create {{ suggestion.kind }}</a>{% endif %}{% endif %}</div>{% endfor %}
-{% for duplicate in run.duplicates %}<p>Possible exact text duplicate: <a href="{% url 'notice' duplicate.notice_id %}">{{ duplicate.notice.title }}</a></p>{% endfor %}
+<details class="card ai-consent">
+<summary>Send to AI provider (optional)</summary>
+<p>The reviewed text below will be sent to the configured external AI provider. Check the provider's terms and privacy policy before proceeding, and ensure the text contains no information you want to keep private.</p>
+<form method="post" action="{% url 'intake:suggest' notice.pk run.pk %}">{% csrf_token %}
+<button type="submit" name="provider" value="ai">I understand — generate AI suggestions</button>
+</form>
+</details>
+{% for suggestion in run.suggestions.all %}
+<article class="card item">
+<div>
+<span class="tag">{{ suggestion.get_kind_display|default:suggestion.kind }}</span>
+<span class="tag">{{ suggestion.get_status_display }}</span>
+</div>
+<h4>{{ suggestion.title }}</h4>
+{% if suggestion.date_text %}<p><strong>Date info:</strong> {{ suggestion.date_text }}</p>{% endif %}
+{% if suggestion.description %}<p>{{ suggestion.description }}</p>{% endif %}
+<details><summary>Source evidence</summary><p class="prewrap">{{ suggestion.evidence }}</p></details>
+{% if suggestion.status == 'pending' %}
+<p><a class="button secondary" href="{% url 'intake:suggestion' notice.pk suggestion.pk %}">Review this suggestion</a></p>
+{% elif suggestion.status == 'approved' %}
+{% if suggestion.converted_at %}
+<p><span class="tag">Converted</span></p>
+{% elif suggestion.kind == 'event' or suggestion.kind == 'task' %}
+<p><a class="button" href="{% url 'intake:convert_suggestion' notice.pk suggestion.pk %}">Create {{ suggestion.kind }} from this</a></p>
+{% endif %}
+{% elif suggestion.status == 'rejected' %}
+<p><em>Rejected — will not be used</em></p>
+{% endif %}
+</article>
+{% endfor %}
+{% for duplicate in run.duplicates %}
+<div class="flash">
+<strong>⚠ Possible exact text duplicate:</strong> <a href="{% url 'notice' duplicate.notice_id %}">{{ duplicate.notice.title }}</a>
+<p>This extraction matches text already saved in another notice. You may keep both or review the other notice.</p>
+</div>
+{% endfor %}
 {% endif %}</section>{% empty %}<p>No extraction attempts yet.</p>{% endfor %}
 {% endblock %}

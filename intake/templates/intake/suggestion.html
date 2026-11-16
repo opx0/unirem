@@ -1,8 +1,22 @@
 {% extends 'core/base.html' %}{% block title %}Review suggestion{% endblock %}{% block content %}
 <p><a href="{% url 'intake:review' notice.pk %}">← Text extraction and review</a></p>
 <h1>Review suggestion</h1>
-<p>Check the suggestion against the source. Approval saves it for reference only; it does not create or schedule anything.</p>
-<h2>Source evidence</h2><p class="prewrap">{{ suggestion.evidence }}</p>
-<details><summary>Text sent for extraction</summary><p class="prewrap">{{ suggestion.source_text }}</p></details>
-<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit" name="action" value="approve">Approve for reference</button><button type="submit" name="action" value="reject" formnovalidate>Reject</button></form>
+<p>Check the suggestion against the source. Approval saves it for reference only; it does not create or schedule anything. To create an event or task, approve first, then use the "Create" button on the review page.</p>
+<div class="columns">
+<section>
+<h2>Source evidence</h2>
+<div class="card source"><p class="prewrap">{{ suggestion.evidence }}</p></div>
+<details><summary>Full text sent for extraction</summary><p class="prewrap">{{ suggestion.source_text }}</p></details>
+</section>
+<section>
+<h2>Suggested action</h2>
+<form method="post" class="card form">{% csrf_token %}
+{{ form.as_div }}
+<div style="display:flex;gap:.5rem;margin-top:1rem">
+<button type="submit" name="action" value="approve">Approve for reference</button>
+<button type="submit" name="action" value="reject" class="secondary" formnovalidate>Reject</button>
+</div>
+</form>
+</section>
+</div>
 {% endblock %}

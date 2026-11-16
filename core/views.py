@@ -154,6 +154,8 @@ def inbox(request):
             )
         if data["status"]:
             qs = qs.filter(status=data["status"])
+        if data.get("source_context"):
+            qs = qs.filter(source_context=data["source_context"])
         if data["category"]:
             qs = qs.filter(category=data["category"])
         if data["state"]:
@@ -272,6 +274,32 @@ def notice_edit(request, pk):
         "core/form.html",
         {"form": form, "heading": "Review notice", "submit": "Save changes"},
     )
+
+
+@login_required
+def document_preview(request, pk):
+    document = get_object_or_404(SourceDocument, owner=request.user, pk=pk)
+    ext = Path(document.original_name).suffix.lower()
+    content_types = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+    }
+    content_type = content_types.get(ext)
+    if not content_type:
+        raise Http404("Preview is only available for images.")
+    try:
+        response = FileResponse(
+            document.file.open("rb"),
+            content_type=content_type,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        raise Http404("Source file is unavailable") from exc
+    response["Cache-Control"] = "private, no-store"
+    response["Content-Security-Policy"] = "default-src 'none'"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @login_required

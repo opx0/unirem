@@ -60,7 +60,20 @@ class Notice(Owned):
         CONFIRMED = "confirmed", "Confirmed"
         ARCHIVED = "archived", "Archived"
 
+    class SourceContext(models.TextChoices):
+        PORTAL = "portal", "University portal"
+        GMAIL = "gmail", "Gmail screenshot"
+        OUTLOOK = "outlook", "Outlook screenshot"
+        OTHER = "other", "Other user-supplied source"
+
     title = models.CharField(max_length=200)
+    source_context = models.CharField(
+        max_length=30,
+        choices=SourceContext.choices,
+        default=SourceContext.OTHER,
+        blank=True,
+        help_text="User-supplied source context. Does not connect to or read external mailboxes.",
+    )
     original_text = models.TextField(blank=True)
     summary = models.TextField(blank=True)
     target_program = models.CharField(

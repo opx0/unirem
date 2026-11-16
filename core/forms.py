@@ -54,11 +54,15 @@ class CaptureForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.owner = owner
         self.upload_digest = ""
+        self.fields[
+            "upload"
+        ].help_text = "PNG, JPEG or WebP screenshot, or PDF. Files stay private."
 
     class Meta:
         model = Notice
         fields = (
             "title",
+            "source_context",
             "category",
             "original_text",
             "summary",
@@ -71,6 +75,9 @@ class CaptureForm(forms.ModelForm):
             ),
             "summary": forms.Textarea(attrs={"rows": 3}),
         }
+
+    def clean_source_context(self):
+        return self.cleaned_data["source_context"] or Notice.SourceContext.OTHER
 
     def clean_upload(self):
         file = self.cleaned_data.get("upload")
@@ -160,6 +167,11 @@ class CaptureForm(forms.ModelForm):
 
 class NoticeFilterForm(forms.Form):
     q = forms.CharField(required=False, label="Search notices")
+    source_context = forms.ChoiceField(
+        required=False,
+        label="Source context",
+        choices=[("", "All sources"), *Notice.SourceContext.choices],
+    )
     category = forms.ChoiceField(
         required=False,
         choices=[("", "All categories"), *Notice._meta.get_field("category").choices],
@@ -179,12 +191,18 @@ class NoticeEditForm(forms.ModelForm):
         model = Notice
         fields = (
             "title",
+            "source_context",
             "summary",
             "category",
             "status",
             "target_program",
             "target_batch",
         )
+
+    def clean_source_context(self):
+        if self.add_prefix("source_context") not in self.data:
+            return self.instance.source_context or Notice.SourceContext.OTHER
+        return self.cleaned_data["source_context"] or Notice.SourceContext.OTHER
 
 
 class EventForm(forms.ModelForm):

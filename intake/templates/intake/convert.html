@@ -1,8 +1,23 @@
 {% extends 'core/base.html' %}{% block title %}Create {{ suggestion.kind }}{% endblock %}{% block content %}
-<h1>Create {{ suggestion.kind }}</h1>
-<p>Review the details against the source. Dates and times are not filled in from the suggestion.</p>
-<p>Source evidence: {{ suggestion.evidence }}</p>
-{% if suggestion.date_text %}<p>Suggested date text (unverified): {{ suggestion.date_text }}</p>{% endif %}
-<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save</button></form>
-<p><a href="{% url 'intake:review' notice.pk %}">Cancel</a></p>
+<p><a href="{% url 'intake:review' notice.pk %}">← Back to review</a></p>
+<h1>Create {{ suggestion.kind }} from suggestion</h1>
+<div class="columns">
+<section>
+<h2>From this evidence</h2>
+<div class="card source">
+<p><strong>{{ suggestion.title }}</strong></p>
+{% if suggestion.date_text %}<p>Date info: {{ suggestion.date_text }}</p>{% endif %}
+<p class="prewrap">{{ suggestion.evidence }}</p>
+<p><small>Source notice: <a href="{% url 'notice' notice.pk %}">{{ notice.title }}</a></small></p>
+</div>
+</section>
+<section>
+<h2>{{ suggestion.kind|title }} details</h2>
+<p>Review and adjust all fields. Nothing is scheduled until you save.</p>
+<form method="post" class="card form">{% csrf_token %}
+{{ form.as_div }}
+<button type="submit">Save {{ suggestion.kind }}</button>
+</form>
+</section>
+</div>
 {% endblock %}

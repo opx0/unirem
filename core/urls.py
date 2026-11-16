@@ -16,6 +16,7 @@ urlpatterns = [
     path(
         "source/<int:pk>/download/", views.document_download, name="document_download"
     ),
+    path("source/<int:pk>/preview/", views.document_preview, name="document_preview"),
     path("events/", views.records, {"kind": "events"}, name="events"),
     path("tasks/", views.records, {"kind": "tasks"}, name="tasks"),
     path(
